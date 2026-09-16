@@ -8,7 +8,9 @@
 不是從記憶體或 CSV 讀的。
 """
 
+import os
 import sqlite3
+from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
@@ -62,6 +64,47 @@ st.caption("資料來源：中央氣象署開放資料平臺　|　資料儲存�
 if not DB_PATH.exists():
     st.error("找不到 data.db，請先執行 hw4.ipynb 建立資料庫。")
     st.stop()
+
+# ---------------------------------------------------------------------------
+# 側邊欄：重新抓取最新預報
+# 需要 CWA 授權碼。本機看環境變數 CWA_API_KEY；
+# 部署到 Streamlit Cloud 時改在 Settings → Secrets 設定同名的 secret。
+# ---------------------------------------------------------------------------
+def get_api_key() -> str:
+    try:
+        if "CWA_API_KEY" in st.secrets:
+            return str(st.secrets["CWA_API_KEY"])
+    except Exception:
+        pass  # 沒有 secrets 檔案時 st.secrets 會拋例外，忽略即可
+    return os.getenv("CWA_API_KEY", "")
+
+
+with st.sidebar:
+    st.header("資料")
+    updated_at = (
+        datetime.fromtimestamp(DB_PATH.stat().st_mtime).strftime("%Y-%m-%d %H:%M")
+        if DB_PATH.exists() else "—"
+    )
+    st.caption(f"資料庫更新時間：{updated_at}")
+
+    api_key = get_api_key()
+    if api_key:
+        if st.button("🔄 重新抓取最新預報", use_container_width=True):
+            try:
+                import weather
+                with st.spinner("正在向中央氣象署取得最新預報…"):
+                    df_new = weather.refresh_data(api_key)
+                st.success(f"已更新 {len(df_new)} 筆資料")
+                st.rerun()
+            except Exception as error:
+                st.error(f"更新失敗：{error}")
+    else:
+        st.caption(
+            "未設定 CWA 授權碼，無法在線上更新。\n\n"
+            "本機：`export CWA_API_KEY=\"...\"`\n\n"
+            "Streamlit Cloud：Settings → Secrets 新增 `CWA_API_KEY`"
+        )
+
 
 # --- 下拉選單：選擇地區 ---
 regions = get_region_names()

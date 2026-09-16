@@ -8,10 +8,55 @@
 | 檔案 | 說明 |
 |------|------|
 | `hw4.ipynb` | 主要繳交檔，包含 HW4-1 ~ HW4-4 四大題 |
-| `app.py` | HW4-4 的 Streamlit Web App（由 notebook 的 `%%writefile` 產生） |
+| `app.py` | HW4-4 的 Streamlit Web App：下拉選單 + 折線圖 + 表格 |
+| `app_map.py` | 進階版：Folium 台灣地圖 + 左右分欄版面 |
+| `weather.py` | 獨立的資料擷取腳本，一次產生 CSV 與 SQLite |
 | `data.db` | SQLite 資料庫，內含 `TemperatureForecasts` 資料表 |
 | `weather_data.csv` | 氣溫資料的 CSV 備份 |
 | `requirements.txt` | 套件清單 |
+
+## 兩種 Web App
+
+### 1. `app.py` — 折線圖版（對應 HW4-4 評分項目）
+
+```bash
+streamlit run app.py
+```
+
+地區下拉選單 → 該區一週的最高／最低氣溫折線圖與資料表，全部以 SQL 從 `data.db` 查出。
+
+### 2. `app_map.py` — 地圖版（進階）
+
+```bash
+streamlit run app_map.py
+```
+
+左右分欄版面：
+
+- **左側**：Folium 台灣地圖，六大區域以圓圈標示，
+  顏色依當日平均氣溫變化 —— 🔵 < 20°C、🟢 20–25°C、🟠 25–30°C、🔴 > 30°C；
+  點圓圈會跳出該區的最高／最低／平均溫 popup
+- **右側**：當日各區氣溫資料表、全台高低溫摘要與長條圖
+- **上方**：日期下拉選單，切換後地圖與表格同步更新
+
+> 底圖使用 OpenStreetMap。folium 內建的 CartoDB 圖磚自 2025 年起已改為需要 API key，
+> 直接使用會出現「API KEY REQUIRED」浮水印，所以這裡改用免金鑰的 OSM。
+
+## 更新資料
+
+兩個 App 的側邊欄都有 **🔄 重新抓取最新預報** 按鈕，按下去會直接呼叫 CWA API
+並同時更新 `data.db` 與 `weather_data.csv`，不必回頭跑 notebook。
+
+按鈕只在偵測到授權碼時出現：
+
+- 本機：`export CWA_API_KEY="你的授權碼"` 後再啟動 Streamlit
+- Streamlit Cloud：**Settings → Secrets** 新增 `CWA_API_KEY = "你的授權碼"`
+
+也可以直接在終端機更新：
+
+```bash
+python weather.py
+```
 
 ## ⚠️ 繳交前一定要做：換成自己的授權碼
 
